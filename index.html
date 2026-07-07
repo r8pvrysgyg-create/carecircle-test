@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CareCircle v4.7 • Backup & Export</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside id="sidebar" class="sidebar hidden">
+      <div class="brand">
+        <div class="brand-icon">🏡</div>
+        <div>
+          <h1>CareCircle</h1>
+          <p>Family care hub</p>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-link active" data-view="dashboard">🏠 Dashboard <span id="badgeDashboard" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="appointments">📅 Appointments <span id="badgeAppointments" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="calendar">🗓️ Calendar</button>
+        <button class="nav-link" data-view="quickAppointments">⚡ Quick Appointments</button>
+        <button class="nav-link" data-view="timeline">🕒 Care Timeline</button>
+        <button class="nav-link" data-view="tasks">✅ Tasks <span id="badgeTasks" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="notes">📝 Notes</button>
+        <button class="nav-link" data-view="medications">💊 Medications <span id="badgeMedications" class="nav-badge hidden">0</span></button>
+        <button class="nav-link" data-view="directory">📇 Directory</button>
+        <button class="nav-link" data-view="print">🖨️ Print Center</button>
+        <button class="nav-link" data-view="family">👵 Person Profiles</button>
+        <button class="nav-link" data-view="settings">⚙️ Settings</button>
+        <button class="nav-link" data-view="backup">💾 Backup</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <span id="userEmail"></span>
+        <button id="logoutBtn" class="secondary">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="mobile-topbar">
+        <button id="menuBtn" class="icon-btn hidden">☰</button>
+        <strong>CareCircle</strong>
+        <button id="mobileLogoutBtn" class="secondary hidden">Logout</button>
+      </header>
+
+      <section id="signedOutMessage" class="signed-out">
+        <div class="signed-out-card">
+          <h1>🏡 CareCircle</h1>
+          <h2>Please sign in</h2>
+          <p>Sign in with Google to view and update your family care dashboard.</p>
+          <button id="loginBtn">Sign in with Google</button>
+          <p class="muted small-text">Only approved family members should use this site.</p>
+        </div>
+      </section>
+
+      <section id="unauthorizedMessage" class="signed-out hidden">
+        <div class="signed-out-card">
+          <h1>Access not approved</h1>
+          <p>Your Google account is not currently approved for this CareCircle.</p>
+          <p class="muted small-text">Ask the site owner to add your email address in <code>auth.js</code>.</p>
+          <button id="unauthorizedLogoutBtn" class="secondary">Sign out</button>
+        </div>
+      </section>
+
+      <div id="appContent" class="hidden">
+        <section id="view-dashboard" class="view active">
+          <div class="hero-card">
+            <div>
+              <p class="eyebrow">Today’s overview</p>
+              <h2>Care Command Center</h2>
+              <p class="muted">A quick view of today, upcoming care items, overdue tasks, refill alerts, and recent updates.</p>
+            </div>
+            <div class="quick-actions">
+              <button data-jump="appointments">+ Appointment</button>
+              <button data-jump="quickAppointments">Quick Appointments</button>
+              <button data-jump="tasks">+ Task</button>
+              <button data-jump="notes">+ Note</button>
+              <button data-jump="medications">+ Medication</button>
+              <button data-jump="print">Print Today</button>
+            </div>
+          </div>
+
+          <div class="search-card">
+            <input id="globalSearch" placeholder="Search appointments, tasks, notes, medications, directory, phone numbers, locations..." />
+            <div id="searchResults"></div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><span id="statToday">0</span><p>Today</p></div>
+            <div class="stat-card"><span id="statUpcoming">0</span><p>Upcoming</p></div>
+            <div class="stat-card"><span id="statOpenTasks">0</span><p>Open Tasks</p></div>
+            <div class="stat-card"><span id="statNotes">0</span><p>Notes</p></div>
+            <div class="stat-card"><span id="statMedications">0</span><p>Active Meds</p></div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card attention-card">
+              <h3>⚠️ Needs attention</h3>
+              <div id="needsAttention"></div>
+            </div>
+            <div class="card">
+              <h3>📅 Today’s appointments</h3>
+              <div id="todayAppointments"></div>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card transportation-card">
+              <h3>🚐 Today’s transportation</h3>
+              <div id="todayTransportation"></div>
+            </div>
+            <div class="card">
+              <h3>✅ Open tasks</h3>
+              <div id="openTasks"></div>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3>🌤️ Tomorrow / Next up</h3>
+              <div id="nextUp"></div>
+            </div>
+            <div class="card">
+              <h3>🚦 Appointments waiting for ride</h3>
+              <div id="waitingForRide"></div>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3>📌 Upcoming appointments</h3>
+              <div id="upcomingAppointments"></div>
+            </div>
+            <div class="card">
+              <h3>💊 Refill watch</h3>
+              <div id="dashboardRefillWatch"></div>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3>📝 Recent notes</h3>
+              <div id="recentNotes"></div>
+            </div>
+            <div class="card">
+              <h3>🕒 Activity timeline</h3>
+              <div id="activityFeed"></div>
+            </div>
+          </div>
+
+
+        </section>
+
+        <section id="view-appointments" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Transportation and appointment workflow</p>
+              <h2>Appointments</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="appointmentFormTitle">Add appointment</h3>
+            <div class="form-grid">
+
+              <div class="form-field full-width">
+                <label for="apptTemplate">Appointment Template</label>
+                <select id="apptTemplate">
+                  <option value="">No template</option>
+                </select>
+              </div>
+
+              <div class="form-field checkbox-field full-width">
+                <label><input type="checkbox" id="saveAsTemplate" /> Save this appointment as a template</label>
+              </div>
+
+              <div id="templateNameRow" class="form-field full-width hidden">
+                <label for="templateName">Template Name</label>
+                <input id="templateName" placeholder="Example: Grandma Cardiology" />
+              </div>
+
+              <select id="apptPerson">
+                <option value="">Who is this for?</option>
+                <option value="Grandma">Grandma</option>
+                <option value="Grandpa">Grandpa</option>
+                <option value="Both">Both</option>
+              </select>
+
+              <select id="apptType">
+                <option value="">Appointment type</option>
+                <option value="Primary Care">Primary Care</option>
+                <option value="Cardiologist">Cardiologist</option>
+                <option value="Eye Doctor">Eye Doctor</option>
+                <option value="Dentist">Dentist</option>
+                <option value="Physical Therapy">Physical Therapy</option>
+                <option value="Lab Work">Lab Work</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <select id="apptDirectoryContact">
+                <option value="">Directory contact / location (optional)</option>
+              </select>
+
+              <input id="apptDoctor" placeholder="Doctor / Office / Visit details" />
+              <input id="apptLocation" placeholder="Location" />
+
+              <div class="form-field">
+                <label for="apptDriverSelect">Driver / Transportation</label>
+                <select id="apptDriverSelect">
+                  <option value="">Select driver</option>
+                  <option value="Brent">Brent</option>
+                  <option value="Dean">Dean</option>
+                  <option value="Para Transit">Para Transit</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div id="apptDriverOtherWrap" class="form-field hidden">
+                <label for="apptDriverOther">Other driver / transportation</label>
+                <input id="apptDriverOther" placeholder="Enter name or transportation" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptDate">Appointment date</label>
+                <input id="apptDate" type="date" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptTime">Appointment start time</label>
+                <input id="apptTime" type="time" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptEndTime">Appointment end time (optional)</label>
+                <input id="apptEndTime" type="time" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptMaplePickupStart">Pickup from Maple Ridge - start</label>
+                <input id="apptMaplePickupStart" type="time" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptMaplePickupEnd">Pickup from Maple Ridge - end</label>
+                <input id="apptMaplePickupEnd" type="time" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptReturnPickupStart">Pickup from appointment - start</label>
+                <input id="apptReturnPickupStart" type="time" />
+              </div>
+
+              <div class="form-field">
+                <label for="apptReturnPickupEnd">Pickup from appointment - end</label>
+                <input id="apptReturnPickupEnd" type="time" />
+              </div>
+
+              <textarea id="apptNotes" placeholder="Notes"></textarea>
+            </div>
+            <div class="form-actions"><button id="addAppt">Add Appointment</button><button id="cancelAppointmentEdit" class="secondary hidden" type="button">Cancel</button></div>
+          </div>
+
+          <div class="card">
+            <h3>All appointments</h3>
+            <div id="appointments"></div>
+          </div>
+        </section>
+
+
+        <section id="view-calendar" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Monthly schedule</p>
+              <h2>Calendar</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="calendar-toolbar">
+              <div class="calendar-toolbar-left">
+                <button id="calendarPrevMonth" type="button" class="secondary">‹ Previous</button>
+                <button id="calendarToday" type="button">Today</button>
+                <button id="calendarNextMonth" type="button" class="secondary">Next ›</button>
+              </div>
+              <div class="calendar-toolbar-right">
+                <label for="calendarPersonFilter">Show</label>
+                <select id="calendarPersonFilter">
+                  <option value="All">Everyone</option>
+                  <option value="Grandma">Grandma</option>
+                  <option value="Grandpa">Grandpa</option>
+                  <option value="Both">Both</option>
+                </select>
+              </div>
+            </div>
+
+            <h3 id="calendarMonthTitle" class="calendar-month-title">Calendar</h3>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </div>
+
+          <div class="card">
+            <h3 id="calendarSelectedDate">Selected day</h3>
+            <div id="calendarDayDetails"></div>
+          </div>
+        </section>
+
+        <section id="view-tasks" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Shared responsibilities</p>
+              <h2>Tasks</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="taskFormTitle">Add task</h3>
+            <div class="form-grid">
+              <input id="taskTitle" placeholder="Task, e.g. Pick up prescription" />
+              <input id="taskAssignedTo" placeholder="Assigned to" />
+              <input id="taskDueDate" type="date" />
+              <select id="taskPerson">
+                <option value="">Related to</option>
+                <option value="Grandma">Grandma</option>
+                <option value="Grandpa">Grandpa</option>
+                <option value="Both">Both</option>
+              </select>
+              <textarea id="taskNotes" placeholder="Task notes"></textarea>
+            </div>
+            <div class="form-actions"><button id="addTask">Add Task</button><button id="cancelTaskEdit" class="secondary hidden" type="button">Cancel</button></div>
+          </div>
+
+          <div class="card">
+            <h3>All tasks</h3>
+            <div id="tasks"></div>
+          </div>
+        </section>
+
+        <section id="view-notes" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Family updates</p>
+              <h2>Notes</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 id="noteFormTitle">Add note</h3>
+            <select id="notePerson">
+              <option value="">Related to</option>
+              <option value="Grandma">Grandma</option>
+              <option value="Grandpa">Grandpa</option>
+              <option value="Both">Both</option>
+            </select>
+            <textarea id="noteInput" placeholder="Write a family update..."></textarea>
+            <div class="form-actions"><button id="addNote">Add Note</button><button id="cancelNoteEdit" class="secondary hidden" type="button">Cancel</button></div>
+          </div>
+
+          <div class="card">
+            <h3>All notes</h3>
+            <div id="notes"></div>
+          </div>
+        </section>
+
+        <section id="view-medications" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Medication lists and refill tracking</p>
+              <h2>Medications</h2>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3 id="medicationFormTitle">Add medication</h3>
+              <div class="form-grid">
+                <select id="medPerson">
+                  <option value="">Who is this for?</option>
+                  <option value="Grandma">Grandma</option>
+                  <option value="Grandpa">Grandpa</option>
+                  <option value="Both">Both</option>
+                </select>
+                <input id="medName" placeholder="Medication name" />
+                <input id="medDosage" placeholder="Dosage / strength, e.g. 10 mg" />
+                <select id="medSchedule">
+                  <option value="">Time of day</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                  <option value="Bedtime">Bedtime</option>
+                  <option value="As needed">As needed</option>
+                </select>
+                <input id="medDoctor" placeholder="Prescribing doctor" />
+                <input id="medPharmacy" placeholder="Pharmacy" />
+                <input id="medRefillDate" type="date" />
+                <textarea id="medInstructions" placeholder="Instructions / notes"></textarea>
+              </div>
+              <div class="form-actions"><button id="addMedication">Add Medication</button><button id="cancelMedicationEdit" class="secondary hidden" type="button">Cancel</button></div>
+            </div>
+
+            <div class="card">
+              <h3>Refill watch</h3>
+              <div id="refillWatch"></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Active medications</h3>
+            <div id="medications"></div>
+          </div>
+
+          <div class="card">
+            <h3>Inactive / archived medications</h3>
+            <div id="inactiveMedications"></div>
+          </div>
+        </section>
+
+        <section id="view-directory" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Shared contacts and important phone numbers</p>
+              <h2>Directory</h2>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3 id="directoryFormTitle">Add directory contact</h3>
+              <div class="form-grid">
+                <input id="directoryName" placeholder="Name, e.g. Dr. Smith, Maple Ridge, Para Transit" />
+                <select id="directoryCategory">
+                  <option value="">Category</option>
+                  <option value="Doctor">Doctor</option>
+                  <option value="Specialist">Specialist</option>
+                  <option value="Pharmacy">Pharmacy</option>
+                  <option value="Care Facility">Care Facility</option>
+                  <option value="Transportation">Transportation</option>
+                  <option value="Family">Family</option>
+                  <option value="Insurance">Insurance</option>
+                  <option value="Hospital">Hospital</option>
+                  <option value="Other">Other</option>
+                </select>
+                <input id="directoryOrganization" placeholder="Organization / office name" />
+                <input id="directoryPrimaryContact" placeholder="Primary contact / person to ask for" />
+                <input id="directoryPhone" placeholder="Primary phone" />
+                <input id="directoryExtension" placeholder="Extension" />
+                <input id="directoryAltPhone" placeholder="Secondary phone" />
+                <input id="directoryFax" placeholder="Fax" />
+                <input id="directoryOfficeHours" placeholder="Office hours, e.g. Mon-Fri 8 AM-5 PM" />
+                <input id="directoryEmail" placeholder="Email" />
+                <input id="directoryWebsite" placeholder="Website" />
+                <input id="directoryStreet" placeholder="Street address" />
+                <input id="directoryCity" placeholder="City" />
+                <input id="directoryState" placeholder="State" />
+                <input id="directoryZip" placeholder="ZIP code" />
+
+                <div class="form-field checkbox-field">
+                  <label><input id="directoryFavorite" type="checkbox" /> ⭐ Favorite contact</label>
+                </div>
+                <div class="form-field checkbox-field">
+                  <label><input id="directoryLinkGrandma" type="checkbox" /> Link to Grandma</label>
+                  <label><input id="directoryLinkGrandpa" type="checkbox" /> Link to Grandpa</label>
+                </div>
+
+                <select id="directoryDefaultType">
+                  <option value="">Default appointment type</option>
+                  <option value="Primary Care">Primary Care</option>
+                  <option value="Cardiologist">Cardiologist</option>
+                  <option value="Eye Doctor">Eye Doctor</option>
+                  <option value="Dentist">Dentist</option>
+                  <option value="Physical Therapy">Physical Therapy</option>
+                  <option value="Lab Work">Lab Work</option>
+                  <option value="Other">Other</option>
+                </select>
+                <input id="directoryDefaultLocation" placeholder="Default location for appointments" />
+                <input id="directoryTypicalDuration" type="number" min="0" placeholder="Typical appointment length in minutes" />
+                <input id="directoryPreferredDriver" placeholder="Preferred driver / transportation" />
+                <textarea id="directoryTransportationNotes" placeholder="Transportation notes, pickup instructions, confirmation details, etc."></textarea>
+                <textarea id="directoryNotes" placeholder="General notes, extensions, office hours, insurance details, etc."></textarea>
+              </div>
+              <div class="form-actions"><button id="addDirectoryContact">Add Contact</button><button id="cancelDirectoryEdit" class="secondary hidden" type="button">Cancel</button></div>
+            </div>
+
+            <div class="card">
+              <h3>Directory tips</h3>
+              <p class="muted">Use the directory for doctors, pharmacies, Maple Ridge, Para Transit, insurance, family members, and any phone number your family may need.</p>
+              <p class="muted">Favorite contacts appear first. Link contacts to Grandma and/or Grandpa, then use appointment defaults to auto-fill repeat information.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>All contacts</h3>
+            <input id="directoryFilter" class="section-filter" placeholder="Filter directory contacts..." />
+            <div id="directoryContacts"></div>
+          </div>
+        </section>
+
+        <section id="view-quickAppointments" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Saved appointment shortcuts</p>
+              <h2>Quick Appointments</h2>
+              <p id="quickAppointmentsCount" class="muted">0 saved quick appointments</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Find a quick appointment</h3>
+            <input id="quickAppointmentSearch" class="section-filter" placeholder="Search by name, person, doctor, appointment type, driver, or notes..." />
+            <p class="muted small-text">Manage saved appointment shortcuts. Favorites stay at the top, and admins can delete templates.</p>
+          </div>
+
+          <div id="quickAppointmentEditor" class="card hidden">
+            <h3 id="quickAppointmentEditorTitle">Edit Quick Appointment</h3>
+            <div class="form-grid">
+              <input id="quickTemplateName" placeholder="Template name, e.g. Grandma - Cardiologist" />
+
+              <select id="quickTemplatePerson">
+                <option value="">Who is this for?</option>
+                <option value="Grandma">Grandma</option>
+                <option value="Grandpa">Grandpa</option>
+                <option value="Both">Both</option>
+              </select>
+
+              <select id="quickTemplateType">
+                <option value="">Appointment type</option>
+                <option value="Primary Care">Primary Care</option>
+                <option value="Cardiologist">Cardiologist</option>
+                <option value="Eye Doctor">Eye Doctor</option>
+                <option value="Dentist">Dentist</option>
+                <option value="Physical Therapy">Physical Therapy</option>
+                <option value="Lab Work">Lab Work</option>
+                <option value="Other">Other</option>
+              </select>
+
+              <select id="quickTemplateDirectoryContact">
+                <option value="">Directory contact / location optional</option>
+              </select>
+
+              <input id="quickTemplateDoctor" placeholder="Doctor / Office / Visit details" />
+              <input id="quickTemplateLocation" placeholder="Location" />
+              <input id="quickTemplateDriver" placeholder="Preferred driver / transportation" />
+              <input id="quickTemplateLength" type="number" min="0" placeholder="Appointment length in minutes" />
+              <input id="quickTemplateMapleOffset" type="number" min="0" placeholder="Maple Ridge pickup offset in minutes" />
+              <input id="quickTemplateReturnOffset" type="number" min="0" placeholder="Return pickup offset in minutes" />
+
+              <div class="form-field checkbox-field">
+                <label><input id="quickTemplateFavorite" type="checkbox" /> ⭐ Favorite template</label>
+              </div>
+
+              <textarea id="quickTemplateTransportationNotes" placeholder="Transportation notes"></textarea>
+              <textarea id="quickTemplateNotes" placeholder="Template notes"></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button id="saveQuickTemplate" type="button">Save Changes</button>
+              <button id="cancelQuickTemplateEdit" class="secondary" type="button">Cancel</button>
+            </div>
+          </div>
+
+          <div id="quickAppointmentsList">
+            <div id="favoriteQuickAppointments"></div>
+            <div id="allQuickAppointments"></div>
+          </div>
+        </section>
+
+        <section id="view-print" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Daily care packet</p>
+              <h2>Print Center</h2>
+            </div>
+          </div>
+
+          <div class="grid-two">
+            <div class="card">
+              <h3>Print options</h3>
+              <div class="form-grid">
+                <div class="form-field checkbox-field">
+                  <label><input name="printMode" id="printModeSingle" type="radio" value="single" checked /> Print one day</label>
+                  <label><input name="printMode" id="printModeWeekly" type="radio" value="weekly" /> Print weekly packet</label>
+                  <label><input name="printMode" id="printModeRange" type="radio" value="range" /> Print date range</label>
+                </div>
+
+                <div class="form-field">
+                  <label for="printDate">Summary date / week starting date</label>
+                  <input id="printDate" type="date" />
+                </div>
+
+                <div class="form-field">
+                  <label for="printStartDate">Range start date</label>
+                  <input id="printStartDate" type="date" />
+                </div>
+
+                <div class="form-field">
+                  <label for="printEndDate">Range end date</label>
+                  <input id="printEndDate" type="date" />
+                </div>
+
+                <div class="form-field checkbox-field">
+                  <label><input id="printGrandma" type="checkbox" checked /> Grandma</label>
+                  <label><input id="printGrandpa" type="checkbox" checked /> Grandpa</label>
+                </div>
+
+                <div class="form-field checkbox-field print-options">
+                  <label><input id="includeAppointments" type="checkbox" checked /> Appointments</label>
+                  <label><input id="includeTransportation" type="checkbox" checked /> Transportation</label>
+                  <label><input id="includeMedications" type="checkbox" checked /> Medication checklist</label>
+                  <label><input id="includeTasks" type="checkbox" checked /> Tasks</label>
+                  <label><input id="includeContacts" type="checkbox" checked /> Important contacts</label>
+                  <label><input id="includeNotes" type="checkbox" /> Notes</label>
+                </div>
+              </div>
+
+              <div class="action-row">
+                <button id="refreshPrintPreview" type="button">Refresh Preview</button>
+                <button id="printDailySummary" type="button">Print Care Packet</button>
+              </div>
+
+              <p class="muted small-text">Tip: use your browser print dialog to save the daily summary as a PDF if you want to share it digitally.</p>
+            </div>
+
+            <div class="card">
+              <h3>What this includes</h3>
+              <p class="muted">The Care Packet can print one day, a 7-day weekly packet, or a custom date range. It pulls from appointments, transportation windows, active medications, open tasks, important directory contacts, and optional notes.</p>
+              <p class="muted">It is designed to be simple enough to print and hand to a driver, caregiver, or family member.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Preview</h3>
+            <div id="printPreview" class="print-preview"></div>
+          </div>
+        </section>
+
+        <section id="view-family" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Person-centered care view</p>
+              <h2>Person Profiles</h2>
+              <p class="muted">A single place to see appointments, transportation, medications, tasks, notes, and linked contacts for each person.</p>
+            </div>
+          </div>
+
+          <div class="profile-switcher">
+            <button class="profile-tab active" data-profile-tab="Grandma">👵 Grandma</button>
+            <button class="profile-tab" data-profile-tab="Grandpa">👴 Grandpa</button>
+          </div>
+
+          <div class="person-profile active" id="profileGrandma">
+            <div class="profile-hero card">
+              <div>
+                <p class="eyebrow">Grandma profile</p>
+                <h3>👵 Grandma</h3>
+                <p class="muted">Everything currently linked to Grandma.</p>
+              </div>
+              <div id="grandmaProfileSummary" class="profile-summary-grid"></div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>📅 Upcoming appointments</h3>
+                <div id="grandmaAppointments"></div>
+              </div>
+              <div class="card">
+                <h3>🚐 Transportation</h3>
+                <div id="grandmaTransportation"></div>
+              </div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>💊 Medications</h3>
+                <div id="grandmaMedications"></div>
+              </div>
+              <div class="card">
+                <h3>✅ Open tasks</h3>
+                <div id="grandmaTasks"></div>
+              </div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>📇 Linked contacts</h3>
+                <div id="grandmaContacts"></div>
+              </div>
+              <div class="card">
+                <h3>📝 Recent notes</h3>
+                <div id="grandmaNotes"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="person-profile" id="profileGrandpa">
+            <div class="profile-hero card">
+              <div>
+                <p class="eyebrow">Grandpa profile</p>
+                <h3>👴 Grandpa</h3>
+                <p class="muted">Everything currently linked to Grandpa.</p>
+              </div>
+              <div id="grandpaProfileSummary" class="profile-summary-grid"></div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>📅 Upcoming appointments</h3>
+                <div id="grandpaAppointments"></div>
+              </div>
+              <div class="card">
+                <h3>🚐 Transportation</h3>
+                <div id="grandpaTransportation"></div>
+              </div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>💊 Medications</h3>
+                <div id="grandpaMedications"></div>
+              </div>
+              <div class="card">
+                <h3>✅ Open tasks</h3>
+                <div id="grandpaTasks"></div>
+              </div>
+            </div>
+
+            <div class="grid-two">
+              <div class="card">
+                <h3>📇 Linked contacts</h3>
+                <div id="grandpaContacts"></div>
+              </div>
+              <div class="card">
+                <h3>📝 Recent notes</h3>
+                <div id="grandpaNotes"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-timeline" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Recent care activity</p>
+              <h2>Care Timeline</h2>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Today’s Activity</h3>
+            <div id="timelineSummary"></div>
+          </div>
+
+          <div class="card">
+            <h3>Timeline Filters</h3>
+            <div class="form-grid">
+              <select id="timelinePersonFilter">
+                <option value="Everyone">Everyone</option>
+                <option value="Grandma">Grandma</option>
+                <option value="Grandpa">Grandpa</option>
+              </select>
+              <select id="timelineRangeFilter">
+                <option value="today">Today</option>
+                <option value="week">Last 7 days</option>
+                <option value="month">Last 30 days</option>
+                <option value="all">All activity</option>
+              </select>
+              <input id="timelineSearch" placeholder="Search timeline..." />
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Recent Activity</h3>
+            <div id="timelineList"></div>
+          </div>
+        </section>
+
+
+        <section id="view-backup" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Admin backup tools</p>
+              <h2>Backup & Export</h2>
+            </div>
+          </div>
+
+          <div id="backupAdminNotice" class="card hidden">
+            <h3>Admin access required</h3>
+            <p class="muted">Only admins can export CareCircle data backups.</p>
+          </div>
+
+          <div id="backupAdminTools" class="grid-two hidden">
+            <div class="card">
+              <h3>Export CareCircle Data</h3>
+              <p class="muted">Download a JSON backup containing appointments, tasks, notes, medications, directory contacts, Quick Appointments, approved users, and metadata.</p>
+              <p class="muted small-text">Keep this file somewhere safe. It may contain private family care information.</p>
+              <div class="action-row">
+                <button id="exportBackupBtn" type="button">Download Backup JSON</button>
+                <button id="refreshBackupSummaryBtn" class="secondary" type="button">Refresh Summary</button>
+              </div>
+              <div id="backupStatus"></div>
+            </div>
+
+            <div class="card">
+              <h3>Backup Summary</h3>
+              <div id="backupSummary"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="view-settings" class="view">
+          <div class="page-header">
+            <div>
+              <p class="eyebrow">Access and setup</p>
+              <h2>Settings</h2>
+            </div>
+          </div>
+
+          <div id="nonAdminSettings" class="card hidden">
+            <h3>Your access</h3>
+            <p>You are signed in as an approved family member.</p>
+            <p class="muted">Only admins can add, deactivate, or change family member roles.</p>
+          </div>
+
+          <div id="adminOnlySection" class="card hidden">
+            <h3>Admin Controls</h3>
+            <p>Add approved Google accounts here. People must sign in with the exact email address you add.</p>
+
+            <div class="form-grid">
+              <input id="newUserEmail" placeholder="Family member Google email" />
+              <input id="newUserName" placeholder="Display name, e.g. Mom or Uncle Mike" />
+              <select id="newUserRole">
+                <option value="family">Family Member</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
+            <button id="addUserBtn">Add / Update Family Member</button>
+
+            <h3>Approved Users</h3>
+            <div id="usersList"></div>
+          </div>
+        </section>
+        <footer class="version-footer">
+          CareCircle v4.7 • Backup & Export</footer>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
