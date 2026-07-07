@@ -15,6 +15,7 @@ import { renderDashboard } from "./dashboard.js";
 import { renderFamily } from "./family.js";
 import { applyDirectoryContactToAppointment } from "./directory.js";
 import { notify, confirmAction } from "./notifications.js";
+
 import {
   loadAppointmentTemplates,
   createAppointmentTemplate,
@@ -47,7 +48,12 @@ export function setupAppointmentForm() {
 
   if (saveAsTemplate && templateNameRow) {
     saveAsTemplate.onchange = () => {
-      templateNameRow.classList.toggle("hidden", !saveAsTemplate.checked);
+      if (saveAsTemplate.checked) {
+        templateNameRow.classList.remove("hidden");
+        templateNameRow.style.display = "";
+      } else {
+        templateNameRow.classList.add("hidden");
+      }
     };
   }
 
@@ -82,6 +88,7 @@ function setupThirtyMinuteDefault(startInput, endInput) {
 
   startInput.onchange = () => {
     if (!startInput.value) return;
+
     if (!endInput.value || endInput.dataset.autoDefault === "true") {
       endInput.value = addMinutesToTime(startInput.value, 30);
       endInput.dataset.autoDefault = "true";
@@ -95,12 +102,31 @@ function setupThirtyMinuteDefault(startInput, endInput) {
 
 export async function addAppointment() {
   const user = auth.currentUser;
-  if (!user) return alert("You must be logged in to add appointments.");
+
+  if (!user) {
+    alert("You must be logged in to add appointments.");
+    return;
+  }
 
   const data = getAppointmentFormData(user.email);
 
-  if (!data.person || !data.doctor || !data.date) return alert("Please enter person, doctor/visit details, and date.");
-  if (data.driverType === "Other" && !data.driver) return alert("Please enter the other driver or transportation name.");
+  if (!data.person || !data.doctor || !data.date) {
+    alert("Please enter person, doctor/visit details, and date.");
+    return;
+  }
+
+  if (data.driverType === "Other" && !data.driver) {
+    alert("Please enter the other driver or transportation name.");
+    return;
+  }
+
+  const saveCheckbox = document.getElementById("saveAsTemplate");
+  const templateNameInput = document.getElementById("templateName");
+
+  if (saveCheckbox?.checked && !templateNameInput?.value.trim()) {
+    alert("Please enter a template name.");
+    return;
+  }
 
   const wasEditing = Boolean(editingAppointmentId);
 
@@ -123,6 +149,7 @@ export async function addAppointment() {
 
   clearAppointmentForm();
   await loadAppointments();
+
   notify(wasEditing ? "Appointment updated." : "Appointment added.");
 }
 
@@ -152,26 +179,29 @@ async function applySelectedAppointmentTemplate(templateId) {
   const template = appointmentTemplates.find(t => t.id === templateId);
   if (!template) return;
 
-  // Keep the date/time fields blank unless the user already entered an appointment time.
   setValue("apptPerson", template.person);
   setValue("apptType", template.appointmentType);
   setValue("apptDirectoryContact", template.directoryContactId);
 
-  // If the template points to a directory contact, apply the current directory data first.
-  // This keeps phone/address/location details current when a directory card changes.
   if (template.directoryContactId) {
     applyDirectoryContactToAppointment(template.directoryContactId);
   }
 
-  // Template-specific values can override the directory defaults when saved.
   if (template.doctor) setValue("apptDoctor", template.doctor);
   if (template.location) setValue("apptLocation", template.location);
   if (template.preferredDriver) setDriverFromTemplate(template.preferredDriver);
 
   const notesField = document.getElementById("apptNotes");
   const noteParts = [];
-  if (template.transportationNotes) noteParts.push(`Transportation notes: ${template.transportationNotes}`);
-  if (template.notes) noteParts.push(template.notes);
+
+  if (template.transportationNotes) {
+    noteParts.push(`Transportation notes: ${template.transportationNotes}`);
+  }
+
+  if (template.notes) {
+    noteParts.push(template.notes);
+  }
+
   if (notesField && noteParts.length) {
     const existing = notesField.value.trim();
     const addition = noteParts.join("\n\n");
@@ -187,12 +217,18 @@ async function applySelectedAppointmentTemplate(templateId) {
 
   if (appointmentTime?.value) {
     if (endTime && !endTime.value) {
-      endTime.value = addMinutesToTime(appointmentTime.value, Number(template.appointmentLengthMinutes || 60));
+      endTime.value = addMinutesToTime(
+        appointmentTime.value,
+        Number(template.appointmentLengthMinutes || 60)
+      );
       endTime.dataset.autoDefault = "true";
     }
 
     if (mapleStart && !mapleStart.value) {
-      mapleStart.value = addMinutesToTime(appointmentTime.value, -Math.abs(Number(template.maplePickupOffsetMinutes || 45)));
+      mapleStart.value = addMinutesToTime(
+        appointmentTime.value,
+        -Math.abs(Number(template.maplePickupOffsetMinutes || 45))
+      );
       mapleStart.dataset.autoDefault = "true";
     }
 
@@ -202,8 +238,14 @@ async function applySelectedAppointmentTemplate(templateId) {
     }
 
     if (returnStart && !returnStart.value) {
-      const baseReturnStart = endTime?.value || addMinutesToTime(appointmentTime.value, Number(template.appointmentLengthMinutes || 60));
-      returnStart.value = addMinutesToTime(baseReturnStart, Math.abs(Number(template.returnPickupOffsetMinutes || 30)));
+      const baseReturnStart =
+        endTime?.value ||
+        addMinutesToTime(appointmentTime.value, Number(template.appointmentLengthMinutes || 60));
+
+      returnStart.value = addMinutesToTime(
+        baseReturnStart,
+        Math.abs(Number(template.returnPickupOffsetMinutes || 30))
+      );
       returnStart.dataset.autoDefault = "true";
     }
 
@@ -215,8 +257,10 @@ async function applySelectedAppointmentTemplate(templateId) {
 
   await markTemplateUsed(templateId);
   await loadTemplatesIntoAppointmentDropdown();
+
   const select = document.getElementById("apptTemplate");
   if (select) select.value = templateId;
+
   notify(`Template applied: ${template.name}`);
 }
 
@@ -231,12 +275,15 @@ function setDriverFromTemplate(preferredDriver) {
 
   if (selectValues.includes(preferredDriver)) {
     driverSelect.value = preferredDriver;
+
     if (driverOther) driverOther.value = "";
     if (otherWrap) otherWrap.classList.toggle("hidden", preferredDriver !== "Other");
+
     return;
   }
 
   driverSelect.value = "Other";
+
   if (driverOther) driverOther.value = preferredDriver;
   if (otherWrap) otherWrap.classList.remove("hidden");
 }
@@ -263,8 +310,16 @@ async function maybeSaveAppointmentTemplate(appointmentData) {
     location: appointmentData.location,
     preferredDriver: appointmentData.driver,
     appointmentLengthMinutes: getAppointmentLengthMinutes(appointmentData),
-    maplePickupOffsetMinutes: getOffsetMinutes(appointmentData.maplePickupStart, appointmentData.time, 45),
-    returnPickupOffsetMinutes: getOffsetMinutes(appointmentData.appointmentEndTime || appointmentData.time, appointmentData.returnPickupStart, 30),
+    maplePickupOffsetMinutes: getOffsetMinutes(
+      appointmentData.maplePickupStart,
+      appointmentData.time,
+      45
+    ),
+    returnPickupOffsetMinutes: getOffsetMinutes(
+      appointmentData.appointmentEndTime || appointmentData.time,
+      appointmentData.returnPickupStart,
+      30
+    ),
     transportationNotes: "",
     notes: appointmentData.notes,
     favorite: false
@@ -272,31 +327,29 @@ async function maybeSaveAppointmentTemplate(appointmentData) {
 
   await loadTemplatesIntoAppointmentDropdown();
 
-  const templateNameRow = document.getElementById("templateNameRow");
-  if (saveCheckbox) saveCheckbox.checked = false;
-  if (templateNameInput) templateNameInput.value = "";
-  if (templateNameRow) {
-    templateNameRow.classList.add("hidden");
-    templateNameRow.style.display = "none";
-  }
-
   notify("Appointment template saved.");
 }
 
 function getAppointmentLengthMinutes(appointmentData) {
   if (!appointmentData.time || !appointmentData.appointmentEndTime) return 60;
 
-  return Math.max(0, timeToMinutes(appointmentData.appointmentEndTime) - timeToMinutes(appointmentData.time)) || 60;
+  return (
+    Math.max(
+      0,
+      timeToMinutes(appointmentData.appointmentEndTime) - timeToMinutes(appointmentData.time)
+    ) || 60
+  );
 }
 
 function getOffsetMinutes(fromTime, toTime, fallback) {
   if (!fromTime || !toTime) return fallback;
+
   return Math.abs(timeToMinutes(toTime) - timeToMinutes(fromTime)) || fallback;
 }
 
 function timeToMinutes(timeValue) {
   const [hours, minutes] = String(timeValue || "0:0").split(":").map(Number);
-  return (hours * 60) + minutes;
+  return hours * 60 + minutes;
 }
 
 function getAppointmentFormData(userEmail) {
@@ -327,10 +380,15 @@ export async function loadAppointments() {
   appState.appointments = [];
 
   snapshot.forEach(docSnap => {
-    appState.appointments.push({ id: docSnap.id, ...docSnap.data() });
+    appState.appointments.push({
+      id: docSnap.id,
+      ...docSnap.data()
+    });
   });
 
-  appState.appointments.sort((a, b) => `${a.date || ""} ${a.time || ""}`.localeCompare(`${b.date || ""} ${b.time || ""}`));
+  appState.appointments.sort((a, b) =>
+    `${a.date || ""} ${a.time || ""}`.localeCompare(`${b.date || ""} ${b.time || ""}`)
+  );
 
   renderAppointments();
   renderDashboard();
@@ -359,22 +417,27 @@ export function renderAppointmentCard(a, compact = false) {
         <strong>${escapeHtml(a.person)}</strong>
         <span class="pill">${escapeHtml(a.status || "Scheduled")}</span>
       </div>
+
       <p class="item-title">${escapeHtml(a.appointmentType ? `${a.appointmentType}: ${a.doctor}` : a.doctor)}</p>
       <p>📅 ${formatDate(a.date)}</p>
+
       ${appointmentWindow ? `<p>⏰ Appointment time: ${escapeHtml(appointmentWindow)}</p>` : ""}
       ${mapleWindow ? `<p>🏠 Maple Ridge pickup: ${escapeHtml(mapleWindow)}</p>` : ""}
       ${returnWindow ? `<p>🚙 Appointment pickup: ${escapeHtml(returnWindow)}</p>` : ""}
       ${a.location ? `<p>📍 ${escapeHtml(a.location)}</p>` : ""}
       ${a.driver ? `<p>🚗 Driver: ${escapeHtml(a.driver)}</p>` : ""}
       ${a.notes && !compact ? `<p>📝 ${escapeHtml(a.notes)}</p>` : ""}
+
       <small>Added by ${escapeHtml(a.createdBy || "unknown")}</small>
+
       ${!compact ? `
         <div class="action-row">
           <button data-appt-edit="${a.id}">Edit</button>
           <button data-appt-duplicate="${a.id}">Duplicate</button>
           <button data-appt-status="${a.id}" data-current-status="${escapeHtml(a.status || "Scheduled")}">Next Status</button>
           ${isAdmin() ? `<button class="danger" data-appt-delete="${a.id}">Delete</button>` : ""}
-        </div>` : ""}
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -382,24 +445,36 @@ export function renderAppointmentCard(a, compact = false) {
 function setupAppointmentButtons() {
   document.querySelectorAll("[data-appt-edit]").forEach(button => {
     button.onclick = () => {
-      const appointment = appState.appointments.find(a => a.id === button.getAttribute("data-appt-edit"));
+      const appointment = appState.appointments.find(
+        a => a.id === button.getAttribute("data-appt-edit")
+      );
+
       if (appointment) startEditAppointment(appointment);
     };
   });
 
   document.querySelectorAll("[data-appt-duplicate]").forEach(button => {
     button.onclick = () => {
-      const appointment = appState.appointments.find(a => a.id === button.getAttribute("data-appt-duplicate"));
+      const appointment = appState.appointments.find(
+        a => a.id === button.getAttribute("data-appt-duplicate")
+      );
+
       if (appointment) startDuplicateAppointment(appointment);
     };
   });
 
   document.querySelectorAll("[data-appt-delete]").forEach(button => {
     button.onclick = async () => {
-      if (!isAdmin()) return alert("Only admins can delete appointments.");
+      if (!isAdmin()) {
+        alert("Only admins can delete appointments.");
+        return;
+      }
+
       if (!confirmAction("Delete this appointment?")) return;
+
       await deleteDoc(doc(db, "appointments", button.getAttribute("data-appt-delete")));
       await loadAppointments();
+
       notify("Appointment deleted.");
     };
   });
@@ -408,11 +483,27 @@ function setupAppointmentButtons() {
     button.onclick = async () => {
       const id = button.getAttribute("data-appt-status");
       const current = button.getAttribute("data-current-status");
-      const statuses = ["Scheduled", "Picked Up", "At Appointment", "Waiting for Ride", "Returned to Maple Ridge", "Completed", "Cancelled"];
+
+      const statuses = [
+        "Scheduled",
+        "Picked Up",
+        "At Appointment",
+        "Waiting for Ride",
+        "Returned to Maple Ridge",
+        "Completed",
+        "Cancelled"
+      ];
+
       const currentIndex = statuses.indexOf(current);
       const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-      await updateDoc(doc(db, "appointments", id), { status: nextStatus, updatedAt: serverTimestamp() });
+
+      await updateDoc(doc(db, "appointments", id), {
+        status: nextStatus,
+        updatedAt: serverTimestamp()
+      });
+
       await loadAppointments();
+
       notify(`Appointment status changed to ${nextStatus}.`);
     };
   });
@@ -421,6 +512,7 @@ function setupAppointmentButtons() {
 function startEditAppointment(a) {
   editingAppointmentId = a.id;
   clearTemplateControls();
+
   setValue("apptPerson", a.person);
   setValue("apptType", a.appointmentType);
   setValue("apptDirectoryContact", a.directoryContactId);
@@ -430,14 +522,18 @@ function startEditAppointment(a) {
   const driverSelect = document.getElementById("apptDriverSelect");
   const driverOther = document.getElementById("apptDriverOther");
   const otherWrap = document.getElementById("apptDriverOtherWrap");
+
   const driverType = a.driverType || a.driver || "";
   const selectValues = driverSelect ? Array.from(driverSelect.options).map(o => o.value) : [];
+
   if (driverSelect && selectValues.includes(driverType)) {
     driverSelect.value = driverType;
+
     if (driverOther) driverOther.value = "";
     if (otherWrap) otherWrap.classList.toggle("hidden", driverType !== "Other");
   } else if (driverSelect && a.driver) {
     driverSelect.value = "Other";
+
     if (driverOther) driverOther.value = a.driver;
     if (otherWrap) otherWrap.classList.remove("hidden");
   }
@@ -453,6 +549,7 @@ function startEditAppointment(a) {
 
   ["apptMaplePickupEnd", "apptReturnPickupEnd"].forEach(id => {
     const el = document.getElementById(id);
+
     if (el) el.dataset.autoDefault = "false";
   });
 
@@ -464,16 +561,28 @@ function startEditAppointment(a) {
 
   const cancelButton = document.getElementById("cancelAppointmentEdit");
   if (cancelButton) cancelButton.classList.remove("hidden");
-  document.getElementById("view-appointments")?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
 
+  document.getElementById("view-appointments")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+  });
+}
 
 function startDuplicateAppointment(a) {
   startEditAppointment(a);
   editingAppointmentId = null;
 
-  ["apptDate", "apptTime", "apptEndTime", "apptMaplePickupStart", "apptMaplePickupEnd", "apptReturnPickupStart", "apptReturnPickupEnd"].forEach(id => {
+  [
+    "apptDate",
+    "apptTime",
+    "apptEndTime",
+    "apptMaplePickupStart",
+    "apptMaplePickupEnd",
+    "apptReturnPickupStart",
+    "apptReturnPickupEnd"
+  ].forEach(id => {
     const el = document.getElementById(id);
+
     if (el) {
       el.value = "";
       delete el.dataset.autoDefault;
@@ -515,6 +624,7 @@ function clearAppointmentForm() {
     "templateName"
   ].forEach(id => {
     const el = document.getElementById(id);
+
     if (el) {
       el.value = "";
       delete el.dataset.autoDefault;
@@ -524,6 +634,7 @@ function clearAppointmentForm() {
   clearTemplateControls();
 
   editingAppointmentId = null;
+
   const title = document.getElementById("appointmentFormTitle");
   if (title) title.textContent = "Add appointment";
 
@@ -535,24 +646,28 @@ function clearAppointmentForm() {
 
   const otherWrap = document.getElementById("apptDriverOtherWrap");
   if (otherWrap) otherWrap.classList.add("hidden");
-
-  const saveAsTemplate = document.getElementById("saveAsTemplate");
-  if (saveAsTemplate) saveAsTemplate.checked = false;
-
-  const templateNameRow = document.getElementById("templateNameRow");
-  if (templateNameRow) templateNameRow.classList.add("hidden");
 }
 
 function clearTemplateControls() {
   const saveCheckbox = document.getElementById("saveAsTemplate");
   const templateNameRow = document.getElementById("templateNameRow");
+  const templateName = document.getElementById("templateName");
 
   if (saveCheckbox) saveCheckbox.checked = false;
-  if (templateNameRow) templateNameRow.style.display = "none";
+
+  if (templateNameRow) {
+    templateNameRow.classList.add("hidden");
+    templateNameRow.style.display = "";
+  }
+
+  if (templateName) {
+    templateName.value = "";
+  }
 }
 
 function setValue(id, value) {
   const el = document.getElementById(id);
+
   if (el) el.value = value || "";
 }
 
@@ -570,17 +685,22 @@ function formatWindow(start, end) {
   if (startFormatted && endFormatted) return `${startFormatted} - ${endFormatted}`;
   if (startFormatted) return `Starting ${startFormatted}`;
   if (endFormatted) return `By ${endFormatted}`;
+
   return "";
 }
 
 export function getTodaysAppointments() {
   const today = todayString();
+
   return appState.appointments.filter(a => a.date === today && a.status !== "Cancelled");
 }
 
 export function getUpcomingAppointments(limit = 5) {
   const today = todayString();
-  return appState.appointments.filter(a => a.date >= today && a.status !== "Cancelled").slice(0, limit);
+
+  return appState.appointments
+    .filter(a => a.date >= today && a.status !== "Cancelled")
+    .slice(0, limit);
 }
 
 export function getTodaysTransportationItems() {
@@ -616,8 +736,7 @@ export function getTodaysTransportationItems() {
 }
 
 export function getWaitingForRideAppointments() {
-  return appState.appointments.filter(a =>
-    a.status === "Waiting for Ride" ||
-    a.status === "Waiting for ride"
+  return appState.appointments.filter(
+    a => a.status === "Waiting for Ride" || a.status === "Waiting for ride"
   );
 }
