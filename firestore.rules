@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function email() {
+      return request.auth.token.email.lower();
+    }
+
+    function isBootstrapAdmin() {
+      return signedIn() && email() in ["npringleco@gmail.com"];
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(email());
+    }
+
+    function isApproved() {
+      return signedIn() && exists(userPath()) && get(userPath()).data.active == true;
+    }
+
+    function isAdmin() {
+      return isApproved() && get(userPath()).data.role == "admin";
+    }
+
+    match /users/{userEmail} {
+      allow read: if isApproved();
+      allow create: if isAdmin()
+        || (isBootstrapAdmin()
+          && userEmail == email()
+          && request.resource.data.role == "admin"
+          && request.resource.data.active == true);
+      allow update, delete: if isAdmin();
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /notes/{noteId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /medications/{medicationId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /directory/{contactId} {
+      allow read: if isApproved();
+      allow create, update: if isApproved();
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
