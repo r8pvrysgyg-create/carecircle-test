@@ -160,6 +160,23 @@
           <div class="card">
             <h3 id="appointmentFormTitle">Add appointment</h3>
             <div class="form-grid">
+
+              <div class="form-field full-width">
+                <label for="apptTemplate">Appointment Template</label>
+                <select id="apptTemplate">
+                  <option value="">No template</option>
+                </select>
+              </div>
+
+              <div class="form-field checkbox-field full-width">
+                <label><input type="checkbox" id="saveAsTemplate" /> Save this appointment as a template</label>
+              </div>
+
+              <div id="templateNameRow" class="form-field full-width hidden">
+                <label for="templateName">Template Name</label>
+                <input id="templateName" placeholder="Example: Grandma Cardiology" />
+              </div>
+
               <select id="apptPerson">
                 <option value="">Who is this for?</option>
                 <option value="Grandma">Grandma</option>
